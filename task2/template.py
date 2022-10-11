@@ -1,8 +1,8 @@
-from pylatex import Document, Package, Section,\
-    Subsection, Command, Head, Foot, PageStyle, LargeText,\
-    simple_page_number, UnsafeCommand, Tabular, Tabu, MiniPage, Figure
+from pylatex import Document, Package, Command, Head,\
+     Foot, PageStyle, UnsafeCommand, MiniPage
 from pylatex.utils import NoEscape, italic 
 from pylatex.base_classes import CommandBase, Arguments
+from copy import deepcopy
 
 def set_preamble(doc):
     doc.documentclass = Command(
@@ -46,89 +46,110 @@ class Table_V_Border(CommandBase):
     _latex_name = 'tableVBorder'
     packages = [Package('tabularray')]
 
+def get_escaped_template_string(conf):
+    result = r"\begin{tblr}{"
+
+    if conf['vlines'] is not None and conf['vlines']: result += r"vlines,"
+    if conf['hlines'] is not None and conf['hlines']: result += r"hlines,"
+
+    def_rows_height_align = "rows={" + conf['rows_default_height'] + ", " + conf['rows_default_align'] + "},"
+    result += fr"{def_rows_height_align}"
+
+    def_cols_width_align = "columns={" + conf['cols_default_width'] + ", " + conf['cols_default_align'] + "},"
+    result += fr"{def_cols_width_align}"
+
+    if conf['modify_rows'] is not None:
+        temp = ""
+        for row in conf['modify_rows']:
+            temp += "row{" + str(row[0]) + "} = {" + row[1] + "},"
+        result += fr"{temp}"
+
+    if conf['modify_cols'] is not None:
+        temp = ""
+        for col in conf['modify_cols']:
+            temp += "column{" + str(col[0]) + "} = {" + col[1] + "},"
+        result += fr"{temp}"
+
+    if conf['modify_hlines'] is not None:
+        temp = "hline{"
+        for entry in conf['modify_hlines']:
+            temp += str(entry) + ","
+        temp = temp[:-1] + "},"
+        result += fr"{temp}"
+
+    if conf['modify_vlines'] is not None:
+        temp = "vline{" 
+        for entry in conf['modify_vlines']:
+            temp += str(entry) + ","
+        temp = temp[:-1] + "},"
+        result += fr"{temp}"
+
+    if conf['stretch'] is not None:
+        temp = "stretch = " + conf['stretch']
+        result += fr"{temp}"
+
+    result += r"""}
+        {#1} & {#2} & {#3} \\ 
+        {#4} & {#5} & {#6} \\
+        {#7} & {#8} & {#9} \\ 
+        \end{tblr}
+    """
+    return result
+
 def add_table_templates(doc):
+    def_config = {
+        'vlines' : True,
+        'hlines' : True,
+        'rows_default_align' : 'm',
+        'rows_default_height' : '1.5cm',
+        'cols_default_width' : '3cm',
+        'cols_default_align' : 'c',
+        'modify_rows' : [
+            [1, '1.5cm, h, rowsep=5pt'],
+            [3, '1.5cm, f, rowsep=5pt'],
+        ],
+        'modify_cols' : [
+            [1, '3cm, l, colsep=5pt'],
+            [3, '3cm, r, colsep=5pt'],
+        ],
+        'modify_hlines' : None,
+        'modify_vlines' : None,
+        'stretch' : '0'
+    }
+
+    config1 = deepcopy(def_config)
+
+    config2 = deepcopy(def_config)
+    config2['cols_default_width'] = '7cm'
+    config2['modify_cols'] = [
+        [1, '1cm, l, colsep=5pt'],
+        [3, '1cm, r, colsep=5pt'],
+    ]
+
+    config3 = deepcopy(config2)
+    config3['hlines'] = False
+    config3['vlines'] = False
+    config3['modify_vlines'] = [2,3]
+
+    config4 = deepcopy(def_config)
+    config4['vlines'] = False
+
     table_data = [
         [
             '\\tableAllBorder',
-            r"""
-            \begin{tblr}
-            {
-                vlines,
-                hlines,
-                rows = {1.5cm, m},
-                columns={3cm, c},
-                row{1} = {1.5cm, h, rowsep=5pt},
-                row{3} = {1.5cm, f, rowsep=5pt},
-                column{1} = {3cm, l, colsep=5pt},
-                column{3} = {3cm, r, colsep=5pt},
-                stretch = 0,
-            }
-            {#1} & {#2} & {#3} \\ 
-            {#4} & {#5} & {#6} \\
-            {#7} & {#8} & {#9} \\ 
-            \end{tblr}
-            """
+            get_escaped_template_string(config1),
         ],
         [
             '\\tableBigMid',
-            r"""
-            \begin{tblr}
-            {
-                vlines,
-                hlines,
-                rows = {1.5cm, m},
-                columns={7cm, c},
-                row{1} = {1.5cm, h, rowsep=5pt},
-                row{3} = {1.5cm, f, rowsep=5pt},
-                column{1} = {1cm, l, colsep=5pt},
-                column{3} = {1cm, r, colsep=5pt},
-                stretch = 0,
-            }
-            {#1} & {#2} & {#3} \\ 
-            {#4} & {#5} & {#6} \\
-            {#7} & {#8} & {#9} \\ 
-            \end{tblr}
-            """
+            get_escaped_template_string(config2),
         ],
         [
             '\\tableVBorder',
-            r"""
-            \begin{tblr}
-            {
-                vline{2,3},
-                rows = {1.5cm, m},
-                columns={7cm, c},
-                row{1} = {1.5cm, h, rowsep=5pt},
-                row{3} = {1.5cm, f, rowsep=5pt},
-                column{1} = {1cm, l, colsep=5pt},
-                column{3} = {1cm, r, colsep=5pt},
-                stretch = 0,
-            }
-            {#1} & {#2} & {#3} \\ 
-            {#4} & {#5} & {#6} \\
-            {#7} & {#8} & {#9} \\ 
-            \end{tblr}
-            """
+            get_escaped_template_string(config3),
         ],
         [
             '\\tableHBorder',
-            r"""
-            \begin{tblr}
-            {
-                hlines,
-                rows = {1.5cm, m},
-                columns={3cm, c},
-                row{1} = {1.5cm, h, rowsep=5pt},
-                row{3} = {1.5cm, f, rowsep=5pt},
-                column{1} = {3cm, l, colsep=5pt},
-                column{3} = {3cm, r, colsep=5pt},
-                stretch = 0,
-            }
-            {#1} & {#2} & {#3} \\ 
-            {#4} & {#5} & {#6} \\
-            {#7} & {#8} & {#9} \\ 
-            \end{tblr}
-            """
+            get_escaped_template_string(config4),
         ],
     ]
 
